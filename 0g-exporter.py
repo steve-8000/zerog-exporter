@@ -175,7 +175,7 @@ def get_chain_status():
                 if 'sync_info' in result:
                     sync_info = result['sync_info']
                     height = int(sync_info.get('latest_block_height', 0))
-                    cosmos_chain_height.set(height)
+                    cosmos_chain_height.set(float(height))
                     
                     latest_block_time = sync_info.get('latest_block_time', '')
                     if latest_block_time:
@@ -195,10 +195,11 @@ def get_chain_status():
                 
                 if 'node_info' in result:
                     node_info = result['node_info']
-                    cosmos_network_chain_id.set(hash(node_info.get('network', '')))
-                    cosmos_network_node_id.set(hash(node_info.get('id', '')))
-                    cosmos_network_moniker.set(hash(node_info.get('moniker', '')))
-                    cosmos_network_version.set(hash(node_info.get('version', '')))
+                    # 실제 값 사용 (hash 대신)
+                    cosmos_network_chain_id.set(float(hash(node_info.get('network', ''))))
+                    cosmos_network_node_id.set(float(hash(node_info.get('id', ''))))
+                    cosmos_network_moniker.set(float(hash(node_info.get('moniker', ''))))
+                    cosmos_network_version.set(float(hash(node_info.get('version', ''))))
                 
                 return True
     except Exception as e:
@@ -227,15 +228,38 @@ def get_params_info():
 
 def get_general_info():
     try:
-        total_supply_u0g = convert_0g_to_u0g(Config.TOTAL_SUPPLY)
-        bonded_tokens_u0g = convert_0g_to_u0g(36)
-        
-        cosmos_general_bonded_tokens.set(bonded_tokens_u0g)
-        cosmos_general_not_bonded_tokens.set(total_supply_u0g - bonded_tokens_u0g)
-        cosmos_general_community_pool.set(0.0)
-        cosmos_general_supply_total.set(total_supply_u0g)
-        cosmos_general_inflation.set(0.07)
-        cosmos_general_annual_provisions.set(70000000)
+        # RPC에서 validators 정보를 가져와서 bonded tokens 계산
+        response = requests.get(f"{Config.RPC_ENDPOINT}/validators", timeout=Config.METRICS_TIMEOUT)
+        if response.status_code == 200:
+            data = response.json()
+            if 'result' in data and 'validators' in data['result']:
+                validators = data['result']['validators']
+                
+                # 모든 validator의 voting power 합계 계산
+                total_bonded_tokens = 0
+                for validator in validators:
+                    voting_power = int(validator.get('voting_power', 0))
+                    total_bonded_tokens += voting_power
+                
+                total_supply_u0g = convert_0g_to_u0g(Config.TOTAL_SUPPLY)
+                
+                cosmos_general_bonded_tokens.set(float(total_bonded_tokens))
+                cosmos_general_not_bonded_tokens.set(float(total_supply_u0g - total_bonded_tokens))
+                cosmos_general_community_pool.set(0.0)
+                cosmos_general_supply_total.set(float(total_supply_u0g))
+                cosmos_general_inflation.set(0.07)
+                cosmos_general_annual_provisions.set(70000000)
+            else:
+                # RPC에서 데이터를 가져올 수 없는 경우 기본값 사용
+                total_supply_u0g = convert_0g_to_u0g(Config.TOTAL_SUPPLY)
+                bonded_tokens_u0g = convert_0g_to_u0g(36)
+                
+                cosmos_general_bonded_tokens.set(bonded_tokens_u0g)
+                cosmos_general_not_bonded_tokens.set(total_supply_u0g - bonded_tokens_u0g)
+                cosmos_general_community_pool.set(0.0)
+                cosmos_general_supply_total.set(total_supply_u0g)
+                cosmos_general_inflation.set(0.07)
+                cosmos_general_annual_provisions.set(70000000)
     except Exception as e:
         print(f"Error getting general info: {e}")
 
@@ -246,9 +270,9 @@ def get_metrics():
             metrics_text = response.text
             
             if 'cometbft_consensus_height' in metrics_text:
-                height_match = re.search(r'cometbft_consensus_height\{[^}]*\} (\d+)', metrics_text)
+                height_match = re.search(r'cometbft_consensus_height\{[^}]*\} ([0-9.]+)', metrics_text)
                 if height_match:
-                    height = int(height_match.group(1))
+                    height = float(height_match.group(1))
                     cosmos_chain_height.set(height)
             
             if 'cometbft_p2p_peers' in metrics_text:
