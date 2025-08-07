@@ -12,7 +12,7 @@ app = Flask(__name__)
 
 registry = CollectorRegistry()
 
-# 단일 밸리데이터
+# Validator 메트릭 (단일 밸리데이터)
 cosmos_validator_delegations = Gauge('cosmos_validator_delegations', 'Delegations of the Cosmos-based blockchain validator', ['address', 'denom'], registry=registry)
 cosmos_validator_tokens = Gauge('cosmos_validator_tokens', 'Validator tokens', ['address', 'denom'], registry=registry)
 cosmos_validator_delegators_shares = Gauge('cosmos_validator_delegators_shares', 'Validator delegators shares', ['address', 'denom'], registry=registry)
@@ -27,16 +27,16 @@ cosmos_validator_active = Gauge('cosmos_validator_active', 'Validator active sta
 cosmos_validator_status = Gauge('cosmos_validator_status', 'Validator status', ['address'], registry=registry)
 cosmos_validator_jailed = Gauge('cosmos_validator_jailed', 'Validator jailed status', ['address'], registry=registry)
 
-# 밸리데이터 세트
-cosmos_validators_commission = Gauge('cosmos_validators_commission', 'Commission of the Cosmos-based blockchain validator', ['address', 'moniker'], registry=registry)
-cosmos_validators_status = Gauge('cosmos_validators_status', 'Status of the Cosmos-based blockchain validator', ['address', 'moniker'], registry=registry)
-cosmos_validators_jailed = Gauge('cosmos_validators_jailed', 'Jailed status of the Cosmos-based blockchain validator', ['address', 'moniker'], registry=registry)
-cosmos_validators_tokens = Gauge('cosmos_validators_tokens', 'Tokens of the Cosmos-based blockchain validator', ['address', 'moniker', 'denom'], registry=registry)
-cosmos_validators_delegator_shares = Gauge('cosmos_validators_delegator_shares', 'Delegator shares of the Cosmos-based blockchain validator', ['address', 'moniker', 'denom'], registry=registry)
-cosmos_validators_min_self_delegation = Gauge('cosmos_validators_min_self_delegation', 'Self declared minimum self delegation shares of the Cosmos-based blockchain validator', ['address', 'moniker', 'denom'], registry=registry)
-cosmos_validators_missed_blocks = Gauge('cosmos_validators_missed_blocks', 'Missed blocks of the Cosmos-based blockchain validator', ['address', 'moniker'], registry=registry)
-cosmos_validators_rank = Gauge('cosmos_validators_rank', 'Rank of the Cosmos-based blockchain validator', ['address', 'moniker'], registry=registry)
-cosmos_validators_active = Gauge('cosmos_validators_active', '1 if the Cosmos-based blockchain validator is in active set, 0 if no', ['address', 'moniker'], registry=registry)
+# Validators 메트릭 (밸리데이터 세트)
+cosmos_validators_commission = Gauge('cosmos_validators_commission', 'Commission of the Cosmos-based blockchain validator', ['address'], registry=registry)
+cosmos_validators_status = Gauge('cosmos_validators_status', 'Status of the Cosmos-based blockchain validator', ['address'], registry=registry)
+cosmos_validators_jailed = Gauge('cosmos_validators_jailed', 'Jailed status of the Cosmos-based blockchain validator', ['address'], registry=registry)
+cosmos_validators_tokens = Gauge('cosmos_validators_tokens', 'Tokens of the Cosmos-based blockchain validator', ['address', 'denom'], registry=registry)
+cosmos_validators_delegator_shares = Gauge('cosmos_validators_delegator_shares', 'Delegator shares of the Cosmos-based blockchain validator', ['address', 'denom'], registry=registry)
+cosmos_validators_min_self_delegation = Gauge('cosmos_validators_min_self_delegation', 'Self declared minimum self delegation shares of the Cosmos-based blockchain validator', ['address', 'denom'], registry=registry)
+cosmos_validators_missed_blocks = Gauge('cosmos_validators_missed_blocks', 'Missed blocks of the Cosmos-based blockchain validator', ['address'], registry=registry)
+cosmos_validators_rank = Gauge('cosmos_validators_rank', 'Rank of the Cosmos-based blockchain validator', ['address'], registry=registry)
+cosmos_validators_active = Gauge('cosmos_validators_active', '1 if the Cosmos-based blockchain validator is in active set, 0 if no', ['address'], registry=registry)
 
 
 
@@ -87,51 +87,77 @@ def convert_0g_to_u0g(og_amount):
 
 def get_validator_info():
     try:
-        response = requests.get(f"{Config.RPC_ENDPOINT}/status", timeout=Config.METRICS_TIMEOUT)
+        validator_address = Config.VALIDATOR_ADDRESS
+        
+        # RPC에서 해당 validator 정보 가져오기
+        response = requests.get(f"{Config.RPC_ENDPOINT}/validators", timeout=Config.METRICS_TIMEOUT)
         if response.status_code == 200:
             data = response.json()
-            if 'result' in data and 'validator_info' in data['result']:
-                validator_info = data['result']['validator_info']
-                validator_address = validator_info.get('address', 'unknown')
+            if 'result' in data and 'validators' in data['result']:
+                validators = data['result']['validators']
                 
-                voting_power_u0g = int(validator_info.get('voting_power', 0))
-                voting_power_0g = convert_u0g_to_0g(voting_power_u0g)
+                # config에서 지정한 validator 찾기
+                target_validator = None
+                for validator in validators:
+                    if validator.get('address') == validator_address:
+                        target_validator = validator
+                        break
                 
-                cosmos_validator_tokens.labels(address=validator_address, denom=Config.TOKEN_DENOM).set(voting_power_u0g)
-                cosmos_validator_delegators_shares.labels(address=validator_address, denom=Config.TOKEN_DENOM).set(voting_power_u0g)
-                cosmos_validator_commission_rate.labels(address=validator_address).set(0.0)
-                cosmos_validator_commission.labels(address=validator_address).set(0.0)
-                cosmos_validator_missed_blocks.labels(address=validator_address).set(0.0)
-                cosmos_validator_rank.labels(address=validator_address).set(1.0)
-                cosmos_validator_active.labels(address=validator_address).set(1.0)
-                cosmos_validator_status.labels(address=validator_address).set(1.0)
-                cosmos_validator_jailed.labels(address=validator_address).set(0.0)
-                
-                cosmos_validator_delegations.labels(address=validator_address, denom=Config.TOKEN_DENOM).set(voting_power_u0g)
-                cosmos_validator_rewards.labels(address=validator_address, denom=Config.TOKEN_DENOM).set(0.0)
-                cosmos_validator_unbondings.labels(address=validator_address, denom=Config.TOKEN_DENOM).set(0.0)
-                cosmos_validator_redelegations.labels(address=validator_address, denom=Config.TOKEN_DENOM).set(0.0)
-                
-                return validator_address
+                if target_validator:
+                    voting_power_u0g = int(target_validator.get('voting_power', 0))
+                    
+                    cosmos_validator_tokens.labels(address=validator_address, denom=Config.TOKEN_DENOM).set(voting_power_u0g)
+                    cosmos_validator_delegators_shares.labels(address=validator_address, denom=Config.TOKEN_DENOM).set(voting_power_u0g)
+                    cosmos_validator_commission_rate.labels(address=validator_address).set(0.0)
+                    cosmos_validator_commission.labels(address=validator_address).set(0.0)
+                    cosmos_validator_missed_blocks.labels(address=validator_address).set(0.0)
+                    cosmos_validator_rank.labels(address=validator_address).set(1.0)
+                    cosmos_validator_active.labels(address=validator_address).set(1.0)
+                    cosmos_validator_status.labels(address=validator_address).set(1.0)
+                    cosmos_validator_jailed.labels(address=validator_address).set(0.0)
+                    
+                    cosmos_validator_delegations.labels(address=validator_address, denom=Config.TOKEN_DENOM).set(voting_power_u0g)
+                    cosmos_validator_rewards.labels(address=validator_address, denom=Config.TOKEN_DENOM).set(0.0)
+                    cosmos_validator_unbondings.labels(address=validator_address, denom=Config.TOKEN_DENOM).set(0.0)
+                    cosmos_validator_redelegations.labels(address=validator_address, denom=Config.TOKEN_DENOM).set(0.0)
+                    
+                    return validator_address
+                else:
+                    print(f"Validator {validator_address} not found in validators list")
+            else:
+                print("No validators found in response")
+        else:
+            print(f"Failed to get validators: {response.status_code}")
+        
     except Exception as e:
         print(f"Error getting validator info: {e}")
     return None
 
 def get_validators_set():
     try:
-        validator_address = get_validator_info()
-        if validator_address:
-            validator_moniker = "LECCA"
-            
-            cosmos_validators_commission.labels(address=validator_address, moniker=validator_moniker).set(0.0)
-            cosmos_validators_status.labels(address=validator_address, moniker=validator_moniker).set(1.0)
-            cosmos_validators_jailed.labels(address=validator_address, moniker=validator_moniker).set(0.0)
-            cosmos_validators_tokens.labels(address=validator_address, moniker=validator_moniker, denom=Config.TOKEN_DENOM).set(36000000000)
-            cosmos_validators_delegator_shares.labels(address=validator_address, moniker=validator_moniker, denom=Config.TOKEN_DENOM).set(36000000000)
-            cosmos_validators_min_self_delegation.labels(address=validator_address, moniker=validator_moniker, denom=Config.TOKEN_DENOM).set(0.0)
-            cosmos_validators_missed_blocks.labels(address=validator_address, moniker=validator_moniker).set(0.0)
-            cosmos_validators_rank.labels(address=validator_address, moniker=validator_moniker).set(1.0)
-            cosmos_validators_active.labels(address=validator_address, moniker=validator_moniker).set(1.0)
+        # RPC에서 동적으로 데이터 가져오기
+        response = requests.get(f"{Config.RPC_ENDPOINT}/validators", timeout=Config.METRICS_TIMEOUT)
+        if response.status_code == 200:
+            data = response.json()
+            if 'result' in data and 'validators' in data['result'] and len(data['result']['validators']) > 0:
+                validator = data['result']['validators'][0]
+                validator_address = validator.get('address', 'unknown')
+                voting_power_u0g = int(validator.get('voting_power', 0))
+                
+                # 메트릭 설정
+                cosmos_validators_commission.labels(address=validator_address).set(0.0)
+                cosmos_validators_status.labels(address=validator_address).set(1.0)
+                cosmos_validators_jailed.labels(address=validator_address).set(0.0)
+                cosmos_validators_tokens.labels(address=validator_address, denom=Config.TOKEN_DENOM).set(voting_power_u0g)
+                cosmos_validators_delegator_shares.labels(address=validator_address, denom=Config.TOKEN_DENOM).set(voting_power_u0g)
+                cosmos_validators_min_self_delegation.labels(address=validator_address, denom=Config.TOKEN_DENOM).set(0.0)
+                cosmos_validators_missed_blocks.labels(address=validator_address).set(0.0)
+                cosmos_validators_rank.labels(address=validator_address).set(1.0)
+                cosmos_validators_active.labels(address=validator_address).set(1.0)
+            else:
+                print("No validators found in response")
+        else:
+            print(f"Failed to get validators: {response.status_code}")
         
     except Exception as e:
         print(f"Error getting validators set: {e}")
@@ -252,7 +278,35 @@ def params_metrics():
 
 @app.route('/metrics/validators')
 def validators_metrics():
-    get_validators_set()
+    try:
+        # RPC에서 동적으로 데이터 가져오기
+        response = requests.get(f"{Config.RPC_ENDPOINT}/validators", timeout=Config.METRICS_TIMEOUT)
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            if 'result' in data and 'validators' in data['result'] and len(data['result']['validators']) > 0:
+                validator = data['result']['validators'][0]
+                validator_address = validator.get('address', 'unknown')
+                voting_power_u0g = int(validator.get('voting_power', 0))
+                
+                # 메트릭 설정
+                cosmos_validators_commission.labels(address=validator_address).set(0.0)
+                cosmos_validators_status.labels(address=validator_address).set(1.0)
+                cosmos_validators_jailed.labels(address=validator_address).set(0.0)
+                cosmos_validators_tokens.labels(address=validator_address, denom=Config.TOKEN_DENOM).set(voting_power_u0g)
+                cosmos_validators_delegator_shares.labels(address=validator_address, denom=Config.TOKEN_DENOM).set(voting_power_u0g)
+                cosmos_validators_min_self_delegation.labels(address=validator_address, denom=Config.TOKEN_DENOM).set(0.0)
+                cosmos_validators_missed_blocks.labels(address=validator_address).set(0.0)
+                cosmos_validators_rank.labels(address=validator_address).set(1.0)
+                cosmos_validators_active.labels(address=validator_address).set(1.0)
+            else:
+                return
+        else:
+            return
+    except Exception as e:
+        print(f"Error in validators_metrics: {e}")
+    
     return Response(generate_latest(registry), mimetype=CONTENT_TYPE_LATEST)
 
 @app.route('/metrics/validator')
