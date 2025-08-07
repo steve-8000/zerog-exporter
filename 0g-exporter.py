@@ -12,42 +12,60 @@ app = Flask(__name__)
 
 registry = CollectorRegistry()
 
-cosmos_validator_voting_power = Gauge('cosmos_validator_voting_power', 'Validator voting power', ['validator'], registry=registry)
-cosmos_validator_commission = Gauge('cosmos_validator_commission', 'Validator commission rate', ['validator'], registry=registry)
-cosmos_validator_commission_max = Gauge('cosmos_validator_commission_max', 'Validator max commission rate', ['validator'], registry=registry)
-cosmos_validator_commission_max_change = Gauge('cosmos_validator_commission_max_change', 'Validator max commission change rate', ['validator'], registry=registry)
-cosmos_validator_min_self_delegation = Gauge('cosmos_validator_min_self_delegation', 'Validator min self delegation', ['validator'], registry=registry)
-cosmos_validator_tokens = Gauge('cosmos_validator_tokens', 'Validator tokens', ['validator'], registry=registry)
-cosmos_validator_delegator_shares = Gauge('cosmos_validator_delegator_shares', 'Validator delegator shares', ['validator'], registry=registry)
-cosmos_validator_uptime = Gauge('cosmos_validator_uptime', 'Validator uptime percentage', ['validator'], registry=registry)
-cosmos_validator_self_delegation = Gauge('cosmos_validator_self_delegation', 'Validator self delegation', ['validator'], registry=registry)
-cosmos_validator_missed_blocks = Gauge('cosmos_validator_missed_blocks', 'Validator missed blocks', ['validator'], registry=registry)
-cosmos_validator_jailed = Gauge('cosmos_validator_jailed', 'Validator jailed status', ['validator'], registry=registry)
-cosmos_validator_tombstoned = Gauge('cosmos_validator_tombstoned', 'Validator tombstoned status', ['validator'], registry=registry)
-cosmos_validator_unbonding_height = Gauge('cosmos_validator_unbonding_height', 'Validator unbonding height', ['validator'], registry=registry)
-cosmos_validator_unbonding_time = Gauge('cosmos_validator_unbonding_time', 'Validator unbonding time', ['validator'], registry=registry)
-cosmos_validator_consensus_pubkey = Gauge('cosmos_validator_consensus_pubkey', 'Validator consensus pubkey', ['validator'], registry=registry)
-cosmos_validator_operator_address = Gauge('cosmos_validator_operator_address', 'Validator operator address', ['validator'], registry=registry)
-cosmos_validator_self_delegation_address = Gauge('cosmos_validator_self_delegation_address', 'Validator self delegation address', ['validator'], registry=registry)
+# 단일 밸리데이터
+cosmos_validator_delegations = Gauge('cosmos_validator_delegations', 'Delegations of the Cosmos-based blockchain validator', ['address', 'denom'], registry=registry)
+cosmos_validator_tokens = Gauge('cosmos_validator_tokens', 'Validator tokens', ['address', 'denom'], registry=registry)
+cosmos_validator_delegators_shares = Gauge('cosmos_validator_delegators_shares', 'Validator delegators shares', ['address', 'denom'], registry=registry)
+cosmos_validator_commission_rate = Gauge('cosmos_validator_commission_rate', 'Validator commission rate', ['address'], registry=registry)
+cosmos_validator_commission = Gauge('cosmos_validator_commission', 'Validator commission', ['address'], registry=registry)
+cosmos_validator_rewards = Gauge('cosmos_validator_rewards', 'Validator rewards', ['address', 'denom'], registry=registry)
+cosmos_validator_unbondings = Gauge('cosmos_validator_unbondings', 'Validator unbondings', ['address', 'denom'], registry=registry)
+cosmos_validator_redelegations = Gauge('cosmos_validator_redelegations', 'Validator redelegations', ['address', 'denom'], registry=registry)
+cosmos_validator_missed_blocks = Gauge('cosmos_validator_missed_blocks', 'Validator missed blocks', ['address'], registry=registry)
+cosmos_validator_rank = Gauge('cosmos_validator_rank', 'Validator rank', ['address'], registry=registry)
+cosmos_validator_active = Gauge('cosmos_validator_active', 'Validator active status', ['address'], registry=registry)
+cosmos_validator_status = Gauge('cosmos_validator_status', 'Validator status', ['address'], registry=registry)
+cosmos_validator_jailed = Gauge('cosmos_validator_jailed', 'Validator jailed status', ['address'], registry=registry)
 
-cosmos_validators_total = Gauge('cosmos_validators_total', 'Total number of validators', registry=registry)
-cosmos_validators_active = Gauge('cosmos_validators_active', 'Number of active validators', registry=registry)
-cosmos_validators_inactive = Gauge('cosmos_validators_inactive', 'Number of inactive validators', registry=registry)
-cosmos_validators_jailed = Gauge('cosmos_validators_jailed', 'Number of jailed validators', registry=registry)
-cosmos_validators_tombstoned = Gauge('cosmos_validators_tombstoned', 'Number of tombstoned validators', registry=registry)
-cosmos_validators_bonded_tokens = Gauge('cosmos_validators_bonded_tokens', 'Total bonded tokens', registry=registry)
-cosmos_validators_not_bonded_tokens = Gauge('cosmos_validators_not_bonded_tokens', 'Total not bonded tokens', registry=registry)
-cosmos_validators_total_voting_power = Gauge('cosmos_validators_total_voting_power', 'Total voting power', registry=registry)
-cosmos_validators_average_voting_power = Gauge('cosmos_validators_average_voting_power', 'Average voting power', registry=registry)
-cosmos_validators_min_voting_power = Gauge('cosmos_validators_min_voting_power', 'Minimum voting power', registry=registry)
-cosmos_validators_max_voting_power = Gauge('cosmos_validators_max_voting_power', 'Maximum voting power', registry=registry)
+# 밸리데이터 세트
+cosmos_validators_commission = Gauge('cosmos_validators_commission', 'Commission of the Cosmos-based blockchain validator', ['address', 'moniker'], registry=registry)
+cosmos_validators_status = Gauge('cosmos_validators_status', 'Status of the Cosmos-based blockchain validator', ['address', 'moniker'], registry=registry)
+cosmos_validators_jailed = Gauge('cosmos_validators_jailed', 'Jailed status of the Cosmos-based blockchain validator', ['address', 'moniker'], registry=registry)
+cosmos_validators_tokens = Gauge('cosmos_validators_tokens', 'Tokens of the Cosmos-based blockchain validator', ['address', 'moniker', 'denom'], registry=registry)
+cosmos_validators_delegator_shares = Gauge('cosmos_validators_delegator_shares', 'Delegator shares of the Cosmos-based blockchain validator', ['address', 'moniker', 'denom'], registry=registry)
+cosmos_validators_min_self_delegation = Gauge('cosmos_validators_min_self_delegation', 'Self declared minimum self delegation shares of the Cosmos-based blockchain validator', ['address', 'moniker', 'denom'], registry=registry)
+cosmos_validators_missed_blocks = Gauge('cosmos_validators_missed_blocks', 'Missed blocks of the Cosmos-based blockchain validator', ['address', 'moniker'], registry=registry)
+cosmos_validators_rank = Gauge('cosmos_validators_rank', 'Rank of the Cosmos-based blockchain validator', ['address', 'moniker'], registry=registry)
+cosmos_validators_active = Gauge('cosmos_validators_active', '1 if the Cosmos-based blockchain validator is in active set, 0 if no', ['address', 'moniker'], registry=registry)
 
-cosmos_wallet_balance = Gauge('cosmos_wallet_balance', 'Wallet balance', ['wallet'], registry=registry)
-cosmos_wallet_delegations = Gauge('cosmos_wallet_delegations', 'Wallet delegations', ['wallet'], registry=registry)
-cosmos_wallet_rewards = Gauge('cosmos_wallet_rewards', 'Wallet rewards', ['wallet'], registry=registry)
-cosmos_wallet_unbonding = Gauge('cosmos_wallet_unbonding', 'Wallet unbonding', ['wallet'], registry=registry)
-cosmos_wallet_commission = Gauge('cosmos_wallet_commission', 'Wallet commission', ['wallet'], registry=registry)
 
+
+# Params 메트릭
+cosmos_params_max_validators = Gauge('cosmos_params_max_validators', 'Active set length', registry=registry)
+cosmos_params_unbonding_time = Gauge('cosmos_params_unbonding_time', 'Unbonding time, in seconds', registry=registry)
+cosmos_params_blocks_per_year = Gauge('cosmos_params_blocks_per_year', 'Block per year', registry=registry)
+cosmos_params_goal_bonded = Gauge('cosmos_params_goal_bonded', 'Goal bonded', registry=registry)
+cosmos_params_inflation_min = Gauge('cosmos_params_inflation_min', 'Min inflation', registry=registry)
+cosmos_params_inflation_max = Gauge('cosmos_params_inflation_max', 'Max inflation', registry=registry)
+cosmos_params_inflation_rate_change = Gauge('cosmos_params_inflation_rate_change', 'Inflation rate change', registry=registry)
+cosmos_params_downtail_jail_duration = Gauge('cosmos_params_downtail_jail_duration', 'Downtime jail duration, in seconds', registry=registry)
+cosmos_params_min_signed_per_window = Gauge('cosmos_params_min_signed_per_window', 'Minimal amount of blocks to sign per window to avoid slashing', registry=registry)
+cosmos_params_signed_blocks_window = Gauge('cosmos_params_signed_blocks_window', 'Signed blocks window', registry=registry)
+cosmos_params_slash_fraction_double_sign = Gauge('cosmos_params_slash_fraction_double_sign', '% of tokens to be slashed if double signing', registry=registry)
+cosmos_params_slash_fraction_downtime = Gauge('cosmos_params_slash_fraction_downtime', '% of tokens to be slashed if downtime', registry=registry)
+cosmos_params_base_proposer_reward = Gauge('cosmos_params_base_proposer_reward', 'Base proposer reward', registry=registry)
+cosmos_params_bonus_proposer_reward = Gauge('cosmos_params_bonus_proposer_reward', 'Bonus proposer reward', registry=registry)
+cosmos_params_community_tax = Gauge('cosmos_params_community_tax', 'Community tax', registry=registry)
+
+# General 메트릭
+cosmos_general_bonded_tokens = Gauge('cosmos_general_bonded_tokens', 'Bonded tokens', registry=registry)
+cosmos_general_not_bonded_tokens = Gauge('cosmos_general_not_bonded_tokens', 'Not bonded tokens', registry=registry)
+cosmos_general_community_pool = Gauge('cosmos_general_community_pool', 'Community pool', registry=registry)
+cosmos_general_supply_total = Gauge('cosmos_general_supply_total', 'Total supply', registry=registry)
+cosmos_general_inflation = Gauge('cosmos_general_inflation', 'Inflation', registry=registry)
+cosmos_general_annual_provisions = Gauge('cosmos_general_annual_provisions', 'Annual provisions', registry=registry)
+
+# Chain 메트릭
 cosmos_chain_height = Gauge('cosmos_chain_height', 'Current chain height', registry=registry)
 cosmos_chain_syncing = Gauge('cosmos_chain_syncing', 'Chain syncing status', registry=registry)
 cosmos_chain_latest_block_time = Gauge('cosmos_chain_latest_block_time', 'Latest block time', registry=registry)
@@ -55,22 +73,70 @@ cosmos_chain_latest_block_hash = Gauge('cosmos_chain_latest_block_hash', 'Latest
 cosmos_chain_earliest_block_height = Gauge('cosmos_chain_earliest_block_height', 'Earliest block height', registry=registry)
 cosmos_chain_earliest_block_time = Gauge('cosmos_chain_earliest_block_time', 'Earliest block time', registry=registry)
 
+# Network 메트릭
 cosmos_network_chain_id = Gauge('cosmos_network_chain_id', 'Network chain ID', registry=registry)
 cosmos_network_node_id = Gauge('cosmos_network_node_id', 'Node ID', registry=registry)
 cosmos_network_moniker = Gauge('cosmos_network_moniker', 'Node moniker', registry=registry)
 cosmos_network_version = Gauge('cosmos_network_version', 'Node version', registry=registry)
-
-cosmos_stake_total_supply = Gauge('cosmos_stake_total_supply', 'Total token supply', registry=registry)
-cosmos_stake_circulating_supply = Gauge('cosmos_stake_circulating_supply', 'Circulating token supply', registry=registry)
-cosmos_stake_bonded_tokens = Gauge('cosmos_stake_bonded_tokens', 'Bonded tokens', registry=registry)
-cosmos_stake_not_bonded_tokens = Gauge('cosmos_stake_not_bonded_tokens', 'Not bonded tokens', registry=registry)
-cosmos_stake_bonded_ratio = Gauge('cosmos_stake_bonded_ratio', 'Bonded token ratio', registry=registry)
 
 def convert_u0g_to_0g(u0g_amount):
     return u0g_amount / Config.TOKEN_COEFFICIENT
 
 def convert_0g_to_u0g(og_amount):
     return og_amount * Config.TOKEN_COEFFICIENT
+
+def get_validator_info():
+    try:
+        response = requests.get(f"{Config.RPC_ENDPOINT}/status", timeout=Config.METRICS_TIMEOUT)
+        if response.status_code == 200:
+            data = response.json()
+            if 'result' in data and 'validator_info' in data['result']:
+                validator_info = data['result']['validator_info']
+                validator_address = validator_info.get('address', 'unknown')
+                
+                voting_power_u0g = int(validator_info.get('voting_power', 0))
+                voting_power_0g = convert_u0g_to_0g(voting_power_u0g)
+                
+                cosmos_validator_tokens.labels(address=validator_address, denom=Config.TOKEN_DENOM).set(voting_power_u0g)
+                cosmos_validator_delegators_shares.labels(address=validator_address, denom=Config.TOKEN_DENOM).set(voting_power_u0g)
+                cosmos_validator_commission_rate.labels(address=validator_address).set(0.0)
+                cosmos_validator_commission.labels(address=validator_address).set(0.0)
+                cosmos_validator_missed_blocks.labels(address=validator_address).set(0.0)
+                cosmos_validator_rank.labels(address=validator_address).set(1.0)
+                cosmos_validator_active.labels(address=validator_address).set(1.0)
+                cosmos_validator_status.labels(address=validator_address).set(1.0)
+                cosmos_validator_jailed.labels(address=validator_address).set(0.0)
+                
+                cosmos_validator_delegations.labels(address=validator_address, denom=Config.TOKEN_DENOM).set(voting_power_u0g)
+                cosmos_validator_rewards.labels(address=validator_address, denom=Config.TOKEN_DENOM).set(0.0)
+                cosmos_validator_unbondings.labels(address=validator_address, denom=Config.TOKEN_DENOM).set(0.0)
+                cosmos_validator_redelegations.labels(address=validator_address, denom=Config.TOKEN_DENOM).set(0.0)
+                
+                return validator_address
+    except Exception as e:
+        print(f"Error getting validator info: {e}")
+    return None
+
+def get_validators_set():
+    try:
+        validator_address = get_validator_info()
+        if validator_address:
+            validator_moniker = "LECCA"
+            
+            cosmos_validators_commission.labels(address=validator_address, moniker=validator_moniker).set(0.0)
+            cosmos_validators_status.labels(address=validator_address, moniker=validator_moniker).set(1.0)
+            cosmos_validators_jailed.labels(address=validator_address, moniker=validator_moniker).set(0.0)
+            cosmos_validators_tokens.labels(address=validator_address, moniker=validator_moniker, denom=Config.TOKEN_DENOM).set(36000000000)
+            cosmos_validators_delegator_shares.labels(address=validator_address, moniker=validator_moniker, denom=Config.TOKEN_DENOM).set(36000000000)
+            cosmos_validators_min_self_delegation.labels(address=validator_address, moniker=validator_moniker, denom=Config.TOKEN_DENOM).set(0.0)
+            cosmos_validators_missed_blocks.labels(address=validator_address, moniker=validator_moniker).set(0.0)
+            cosmos_validators_rank.labels(address=validator_address, moniker=validator_moniker).set(1.0)
+            cosmos_validators_active.labels(address=validator_address, moniker=validator_moniker).set(1.0)
+        
+    except Exception as e:
+        print(f"Error getting validators set: {e}")
+
+
 
 def get_chain_status():
     try:
@@ -108,69 +174,44 @@ def get_chain_status():
                     cosmos_network_moniker.set(hash(node_info.get('moniker', '')))
                     cosmos_network_version.set(hash(node_info.get('version', '')))
                 
-                if 'validator_info' in result:
-                    validator_info = result['validator_info']
-                    validator_address = validator_info.get('address', 'unknown')
-                    
-                    voting_power_u0g = int(validator_info.get('voting_power', 0))
-                    voting_power_0g = convert_u0g_to_0g(voting_power_u0g)
-                    
-                    cosmos_validator_voting_power.labels(validator=validator_address).set(voting_power_0g)
-                    cosmos_validator_operator_address.labels(validator=validator_address).set(hash(validator_address))
-                    
-                    cosmos_validator_tokens.labels(validator=validator_address).set(voting_power_u0g)
-                    cosmos_validator_delegator_shares.labels(validator=validator_address).set(voting_power_u0g)
-                    
-                    cosmos_validator_commission.labels(validator=validator_address).set(0.0)
-                    cosmos_validator_commission_max.labels(validator=validator_address).set(0.0)
-                    cosmos_validator_commission_max_change.labels(validator=validator_address).set(0.0)
-                    cosmos_validator_min_self_delegation.labels(validator=validator_address).set(0.0)
-                    cosmos_validator_uptime.labels(validator=validator_address).set(100.0)
-                    cosmos_validator_self_delegation.labels(validator=validator_address).set(0.0)
-                    cosmos_validator_missed_blocks.labels(validator=validator_address).set(0.0)
-                    cosmos_validator_jailed.labels(validator=validator_address).set(0.0)
-                    cosmos_validator_tombstoned.labels(validator=validator_address).set(0.0)
-                    cosmos_validator_unbonding_height.labels(validator=validator_address).set(0.0)
-                    cosmos_validator_unbonding_time.labels(validator=validator_address).set(0.0)
-                
                 return True
     except Exception as e:
         print(f"Error getting chain status: {e}")
     return False
 
-def get_validators_set():
+def get_params_info():
     try:
-        cosmos_validators_total.set(1)
-        cosmos_validators_active.set(1)
-        cosmos_validators_inactive.set(0)
-        cosmos_validators_jailed.set(0)
-        cosmos_validators_tombstoned.set(0)
-        
-        total_voting_power_u0g = convert_0g_to_u0g(36)
-        total_voting_power_0g = 36
-        
-        cosmos_validators_bonded_tokens.set(total_voting_power_u0g)
-        cosmos_validators_not_bonded_tokens.set(0)
-        cosmos_validators_total_voting_power.set(total_voting_power_0g)
-        cosmos_validators_average_voting_power.set(total_voting_power_0g)
-        cosmos_validators_min_voting_power.set(total_voting_power_0g)
-        cosmos_validators_max_voting_power.set(total_voting_power_0g)
-        
-        total_supply_u0g = convert_0g_to_u0g(Config.TOTAL_SUPPLY)
-        cosmos_stake_total_supply.set(total_supply_u0g)
-        cosmos_stake_circulating_supply.set(total_supply_u0g)
-        cosmos_stake_bonded_tokens.set(total_voting_power_u0g)
-        cosmos_stake_not_bonded_tokens.set(total_supply_u0g - total_voting_power_u0g)
-        cosmos_stake_bonded_ratio.set(total_voting_power_u0g / total_supply_u0g)
-        
+        cosmos_params_max_validators.set(100)
+        cosmos_params_unbonding_time.set(1814400)
+        cosmos_params_blocks_per_year.set(6311520)
+        cosmos_params_goal_bonded.set(0.67)
+        cosmos_params_inflation_min.set(0.07)
+        cosmos_params_inflation_max.set(0.20)
+        cosmos_params_inflation_rate_change.set(0.13)
+        cosmos_params_downtail_jail_duration.set(600)
+        cosmos_params_min_signed_per_window.set(0.5)
+        cosmos_params_signed_blocks_window.set(100)
+        cosmos_params_slash_fraction_double_sign.set(0.05)
+        cosmos_params_slash_fraction_downtime.set(0.01)
+        cosmos_params_base_proposer_reward.set(0.01)
+        cosmos_params_bonus_proposer_reward.set(0.04)
+        cosmos_params_community_tax.set(0.02)
     except Exception as e:
-        print(f"Error getting validators set: {e}")
+        print(f"Error getting params info: {e}")
 
-def get_wallet_info():
+def get_general_info():
     try:
-        pass
+        total_supply_u0g = convert_0g_to_u0g(Config.TOTAL_SUPPLY)
+        bonded_tokens_u0g = convert_0g_to_u0g(36)
+        
+        cosmos_general_bonded_tokens.set(bonded_tokens_u0g)
+        cosmos_general_not_bonded_tokens.set(total_supply_u0g - bonded_tokens_u0g)
+        cosmos_general_community_pool.set(0.0)
+        cosmos_general_supply_total.set(total_supply_u0g)
+        cosmos_general_inflation.set(0.07)
+        cosmos_general_annual_provisions.set(70000000)
     except Exception as e:
-        print(f"Error getting wallet info: {e}")
+        print(f"Error getting general info: {e}")
 
 def get_metrics():
     try:
@@ -197,9 +238,35 @@ def get_metrics():
 def metrics():
     get_chain_status()
     get_validators_set()
-    get_wallet_info()
+    
+    get_params_info()
+    get_general_info()
     get_metrics()
     
+    return Response(generate_latest(registry), mimetype=CONTENT_TYPE_LATEST)
+
+@app.route('/metrics/params')
+def params_metrics():
+    get_params_info()
+    return Response(generate_latest(registry), mimetype=CONTENT_TYPE_LATEST)
+
+@app.route('/metrics/validators')
+def validators_metrics():
+    get_validators_set()
+    return Response(generate_latest(registry), mimetype=CONTENT_TYPE_LATEST)
+
+@app.route('/metrics/validator')
+def validator_metrics():
+    get_validator_info()
+    return Response(generate_latest(registry), mimetype=CONTENT_TYPE_LATEST)
+
+
+
+@app.route('/metrics/general')
+def general_metrics():
+    get_chain_status()
+    get_general_info()
+    get_metrics()
     return Response(generate_latest(registry), mimetype=CONTENT_TYPE_LATEST)
 
 @app.route('/health')
@@ -212,14 +279,24 @@ def index():
     <h1>0G Chain Metrics Exporter</h1>
     <p>Available endpoints:</p>
     <ul>
-        <li><a href="/metrics">/metrics</a> - Prometheus metrics</li>
+        <li><a href="/metrics">/metrics</a> - All Prometheus metrics</li>
+        <li><a href="/metrics/params">/metrics/params</a> - Chain parameters</li>
+        <li><a href="/metrics/validators">/metrics/validators</a> - Validators set</li>
+        <li><a href="/metrics/validator">/metrics/validator</a> - Specific validator</li>
+
+        <li><a href="/metrics/general">/metrics/general</a> - General chain metrics</li>
         <li><a href="/health">/health</a> - Health check</li>
+    </ul>
+    <h2>Usage Examples:</h2>
+    <ul>
+
     </ul>
     <h2>Configuration:</h2>
     <ul>
         <li>Token Denom: {Config.TOKEN_DENOM}</li>
         <li>Token Coefficient: {Config.TOKEN_COEFFICIENT}</li>
         <li>Total Supply: {Config.TOTAL_SUPPLY}</li>
+
         <li>RPC Endpoint: {Config.RPC_ENDPOINT}</li>
         <li>gRPC Endpoint: {Config.GRPC_ENDPOINT}</li>
         <li>Metrics Endpoint: {Config.METRICS_ENDPOINT}</li>
