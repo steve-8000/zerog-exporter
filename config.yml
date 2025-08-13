@@ -1,0 +1,36 @@
+listen_address: ":26330"
+metrics_interval: 10
+
+logging:
+  level: "info"
+  format: "json"
+
+block_tracking:
+  enabled: true
+  interval: 5
+  max_consecutive_missed: 100
+
+chains:
+  - chain_id: "0gchain-16601"
+    name: "0G Galileo Testnet"
+    rpc: "http://:50657"
+    api: "http://:50657"
+    websocket: "ws://:50657/websocket"
+    
+    auto_detect: true
+    
+    token_display: "0G"
+    token_decimals: 18
+    
+    validators:
+      - ""
+    
+    wallets:
+      - address: ""
+        name: "Main Wallet"
+
+# Ethereum JSON-RPC for 0G staking contract (disabled for performance)
+ethereum:
+  rpc_url: ""
+  staking_contract: ""
+  ethereum_addresses: []
