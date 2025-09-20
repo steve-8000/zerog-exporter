@@ -10,12 +10,15 @@ block_tracking:
   interval: 5
   max_consecutive_missed: 100
 
+prometheus:
+  server: "http://45.250.255.117:26660"
+
 chains:
   - chain_id: "0gchain-16601"
-    name: "0G Galileo Testnet"
-    rpc: "http://:50657"
-    api: "http://:50657"
-    websocket: "ws://:50657/websocket"
+    name: "0G aristotle Testnet"
+    rpc: "http://45.250.255.117:26657"
+    api: "http://45.250.255.117:26657"
+    websocket: "ws://45.250.255.117:26657/websocket"
     
     auto_detect: true
     
@@ -23,10 +26,11 @@ chains:
     token_decimals: 18
     
     validators:
-      - ""
+      - "D592501A3C5E0A04205C0FF3B48AB772B7570218"
+      - "c297d5452f1bbd7648f78f619ffbc844b80548f0"
     
     wallets:
-      - address: ""
+      - address: "0x8bf23b683d3497f26d6bfc6d715cb3814c092dd7"
         name: "Main Wallet"
 
 # Ethereum JSON-RPC for 0G staking contract (disabled for performance)

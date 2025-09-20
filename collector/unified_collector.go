@@ -360,46 +360,146 @@ func (c *UnifiedCollector) collectCosmosMetrics(ctx context.Context, ch chan<- p
 	
 
 
-	// Supply & Pool metrics (데시몬 고려하여 계산)
-	totalSupply := convertFromBaseUnit(1000000000000000000, c.cfg.TokenDecimals) // 1000 (1조)
-	bondedTokens := convertFromBaseUnit(800000000000000000, c.cfg.TokenDecimals) // 800 (8000억)
-	notBondedTokens := convertFromBaseUnit(200000000000000000, c.cfg.TokenDecimals) // 200 (2000억)
-	communityPool := convertFromBaseUnit(50000000000000000, c.cfg.TokenDecimals) // 50 (500억)
-	
-	ch <- prometheus.MustNewConstMetric(c.bondedTokens, prometheus.GaugeValue, bondedTokens, c.cfg.ChainID, "0G")
-	ch <- prometheus.MustNewConstMetric(c.notBondedTokens, prometheus.GaugeValue, notBondedTokens, c.cfg.ChainID, "0G")
-	ch <- prometheus.MustNewConstMetric(c.communityPool, prometheus.GaugeValue, communityPool, c.cfg.ChainID, "0G")
-	ch <- prometheus.MustNewConstMetric(c.supplyTotal, prometheus.GaugeValue, totalSupply, c.cfg.ChainID, "0G")
-	ch <- prometheus.MustNewConstMetric(c.inflation, prometheus.GaugeValue, 0.05, c.cfg.ChainID) // 5% 인플레이션
-	annualProvisions := convertFromBaseUnit(50000000000000000, c.cfg.TokenDecimals) // 50 (500억)
-	ch <- prometheus.MustNewConstMetric(c.annualProvisions, prometheus.GaugeValue, annualProvisions, c.cfg.ChainID, "0G")
-
-	// Wallet metrics (데시몬 고려하여 계산)
-	for _, wallet := range c.cfg.Wallets {
-		walletBalance := convertFromBaseUnit(100000000000000000, c.cfg.TokenDecimals) // 100 (1000억)
-		walletDelegations := convertFromBaseUnit(36000000000000000, c.cfg.TokenDecimals) // 36 (360억)
-		walletRewards := convertFromBaseUnit(1800000000000000, c.cfg.TokenDecimals) // 1.8 (18억)
-		walletUnbonding := convertFromBaseUnit(5000000000000000, c.cfg.TokenDecimals) // 5 (50억)
-		
-		ch <- prometheus.MustNewConstMetric(c.walletBalance, prometheus.GaugeValue, walletBalance, c.cfg.ChainID, wallet.Address, "0G")
-		ch <- prometheus.MustNewConstMetric(c.walletDelegations, prometheus.GaugeValue, walletDelegations, c.cfg.ChainID, wallet.Address, "0G")
-		ch <- prometheus.MustNewConstMetric(c.walletRewards, prometheus.GaugeValue, walletRewards, c.cfg.ChainID, wallet.Address, "0G")
-		ch <- prometheus.MustNewConstMetric(c.walletUnbonding, prometheus.GaugeValue, walletUnbonding, c.cfg.ChainID, wallet.Address, "0G")
+	// Supply & Pool metrics - 실제 API 호출로 데이터 수집
+	if stakingPool, err := c.client.GetStakingPool(); err == nil {
+		if bondedTokens, err := strconv.ParseInt(stakingPool.Pool.BondedTokens, 10, 64); err == nil {
+			bondedTokensFloat := convertFromBaseUnit(bondedTokens, c.cfg.TokenDecimals)
+			ch <- prometheus.MustNewConstMetric(c.bondedTokens, prometheus.GaugeValue, bondedTokensFloat, c.cfg.ChainID, "0G")
+		}
+		if notBondedTokens, err := strconv.ParseInt(stakingPool.Pool.NotBondedTokens, 10, 64); err == nil {
+			notBondedTokensFloat := convertFromBaseUnit(notBondedTokens, c.cfg.TokenDecimals)
+			ch <- prometheus.MustNewConstMetric(c.notBondedTokens, prometheus.GaugeValue, notBondedTokensFloat, c.cfg.ChainID, "0G")
+		}
 	}
 
-	// Chain parameters (default values)
-	ch <- prometheus.MustNewConstMetric(c.paramsSignedBlocksWindow, prometheus.GaugeValue, 100, c.cfg.ChainID)
-	ch <- prometheus.MustNewConstMetric(c.paramsMinSignedPerWindow, prometheus.GaugeValue, 0.5, c.cfg.ChainID)
-	ch <- prometheus.MustNewConstMetric(c.paramsDowntimeJailDuration, prometheus.GaugeValue, 600, c.cfg.ChainID)
-	ch <- prometheus.MustNewConstMetric(c.paramsSlashFractionDoubleSign, prometheus.GaugeValue, 0.05, c.cfg.ChainID)
-	ch <- prometheus.MustNewConstMetric(c.paramsSlashFractionDowntime, prometheus.GaugeValue, 0.01, c.cfg.ChainID)
-	ch <- prometheus.MustNewConstMetric(c.paramsMaxValidators, prometheus.GaugeValue, 100, c.cfg.ChainID)
-	ch <- prometheus.MustNewConstMetric(c.paramsBaseProposerReward, prometheus.GaugeValue, 0.01, c.cfg.ChainID)
-	ch <- prometheus.MustNewConstMetric(c.paramsBonusProposerReward, prometheus.GaugeValue, 0.04, c.cfg.ChainID)
+	// Community Pool
+	if communityPool, err := c.client.GetCommunityPool(); err == nil {
+		for _, pool := range communityPool.Pool {
+			if amount, err := strconv.ParseInt(pool.Amount, 10, 64); err == nil {
+				amountFloat := convertFromBaseUnit(amount, c.cfg.TokenDecimals)
+				ch <- prometheus.MustNewConstMetric(c.communityPool, prometheus.GaugeValue, amountFloat, c.cfg.ChainID, pool.Denom)
+			}
+		}
+	}
 
-	// Governance metrics
-	ch <- prometheus.MustNewConstMetric(c.consensusProposalReceiveCount, prometheus.GaugeValue, 5, c.cfg.ChainID, "accepted")
-	ch <- prometheus.MustNewConstMetric(c.consensusProposalReceiveCount, prometheus.GaugeValue, 2, c.cfg.ChainID, "rejected")
+	// Bank Supply
+	if bankSupply, err := c.client.GetBankSupply(); err == nil {
+		for _, supply := range bankSupply.Supply {
+			if amount, err := strconv.ParseInt(supply.Amount, 10, 64); err == nil {
+				amountFloat := convertFromBaseUnit(amount, c.cfg.TokenDecimals)
+				ch <- prometheus.MustNewConstMetric(c.supplyTotal, prometheus.GaugeValue, amountFloat, c.cfg.ChainID, supply.Denom)
+			}
+		}
+	}
+
+	// Inflation
+	if inflation, err := c.client.GetMintingInflation(); err == nil {
+		if inflationRate, err := strconv.ParseFloat(inflation.Inflation, 64); err == nil {
+			ch <- prometheus.MustNewConstMetric(c.inflation, prometheus.GaugeValue, inflationRate, c.cfg.ChainID)
+		}
+	}
+
+	// Annual Provisions
+	if annualProvisions, err := c.client.GetMintingAnnualProvisions(); err == nil {
+		if provisions, err := strconv.ParseInt(annualProvisions.AnnualProvisions, 10, 64); err == nil {
+			provisionsFloat := convertFromBaseUnit(provisions, c.cfg.TokenDecimals)
+			ch <- prometheus.MustNewConstMetric(c.annualProvisions, prometheus.GaugeValue, provisionsFloat, c.cfg.ChainID, "0G")
+		}
+	}
+
+	// Wallet metrics - 실제 API 호출로 데이터 수집
+	for _, wallet := range c.cfg.Wallets {
+		// Wallet Balance
+		if balance, err := c.client.GetWalletBalance(wallet.Address); err == nil {
+			for _, bal := range balance.Balances {
+				if amount, err := strconv.ParseInt(bal.Amount, 10, 64); err == nil {
+					amountFloat := convertFromBaseUnit(amount, c.cfg.TokenDecimals)
+					ch <- prometheus.MustNewConstMetric(c.walletBalance, prometheus.GaugeValue, amountFloat, c.cfg.ChainID, wallet.Address, bal.Denom)
+				}
+			}
+		}
+
+		// Wallet Delegations
+		if delegations, err := c.client.GetWalletDelegations(wallet.Address); err == nil {
+			for _, del := range delegations.DelegationResponses {
+				if amount, err := strconv.ParseInt(del.Balance.Amount, 10, 64); err == nil {
+					amountFloat := convertFromBaseUnit(amount, c.cfg.TokenDecimals)
+					ch <- prometheus.MustNewConstMetric(c.walletDelegations, prometheus.GaugeValue, amountFloat, c.cfg.ChainID, wallet.Address, del.Balance.Denom)
+				}
+			}
+		}
+
+		// Wallet Rewards
+		if rewards, err := c.client.GetWalletRewards(wallet.Address); err == nil {
+			for _, reward := range rewards.Rewards {
+				for _, r := range reward.Reward {
+					if amount, err := strconv.ParseInt(r.Amount, 10, 64); err == nil {
+						amountFloat := convertFromBaseUnit(amount, c.cfg.TokenDecimals)
+						ch <- prometheus.MustNewConstMetric(c.walletRewards, prometheus.GaugeValue, amountFloat, c.cfg.ChainID, wallet.Address, r.Denom)
+					}
+				}
+			}
+		}
+
+		// Wallet Unbonding
+		if unbonding, err := c.client.GetWalletUnbonding(wallet.Address); err == nil {
+			for _, ub := range unbonding.UnbondingResponses {
+				for _, entry := range ub.Entries {
+					if amount, err := strconv.ParseInt(entry.Balance, 10, 64); err == nil {
+						amountFloat := convertFromBaseUnit(amount, c.cfg.TokenDecimals)
+						ch <- prometheus.MustNewConstMetric(c.walletUnbonding, prometheus.GaugeValue, amountFloat, c.cfg.ChainID, wallet.Address, "0G")
+					}
+				}
+			}
+		}
+	}
+
+	// Chain parameters - 실제 API 호출로 데이터 수집
+	// Slashing Parameters
+	if slashingParams, err := c.client.GetSlashingParams(); err == nil {
+		if signedBlocksWindow, err := strconv.ParseInt(slashingParams.Params.SignedBlocksWindow, 10, 64); err == nil {
+			ch <- prometheus.MustNewConstMetric(c.paramsSignedBlocksWindow, prometheus.GaugeValue, float64(signedBlocksWindow), c.cfg.ChainID)
+		}
+		if minSignedPerWindow, err := strconv.ParseFloat(slashingParams.Params.MinSignedPerWindow, 64); err == nil {
+			ch <- prometheus.MustNewConstMetric(c.paramsMinSignedPerWindow, prometheus.GaugeValue, minSignedPerWindow, c.cfg.ChainID)
+		}
+		if downtimeJailDuration, err := strconv.ParseFloat(slashingParams.Params.DowntimeJailDuration, 64); err == nil {
+			ch <- prometheus.MustNewConstMetric(c.paramsDowntimeJailDuration, prometheus.GaugeValue, downtimeJailDuration, c.cfg.ChainID)
+		}
+		if slashFractionDoubleSign, err := strconv.ParseFloat(slashingParams.Params.SlashFractionDoubleSign, 64); err == nil {
+			ch <- prometheus.MustNewConstMetric(c.paramsSlashFractionDoubleSign, prometheus.GaugeValue, slashFractionDoubleSign, c.cfg.ChainID)
+		}
+		if slashFractionDowntime, err := strconv.ParseFloat(slashingParams.Params.SlashFractionDowntime, 64); err == nil {
+			ch <- prometheus.MustNewConstMetric(c.paramsSlashFractionDowntime, prometheus.GaugeValue, slashFractionDowntime, c.cfg.ChainID)
+		}
+	}
+
+	// Staking Parameters
+	if stakingParams, err := c.client.GetStakingParams(); err == nil {
+		ch <- prometheus.MustNewConstMetric(c.paramsMaxValidators, prometheus.GaugeValue, float64(stakingParams.Params.MaxValidators), c.cfg.ChainID)
+	}
+
+	// Distribution Parameters
+	if distributionParams, err := c.client.GetDistributionParams(); err == nil {
+		if baseProposerReward, err := strconv.ParseFloat(distributionParams.Params.BaseProposerReward, 64); err == nil {
+			ch <- prometheus.MustNewConstMetric(c.paramsBaseProposerReward, prometheus.GaugeValue, baseProposerReward, c.cfg.ChainID)
+		}
+		if bonusProposerReward, err := strconv.ParseFloat(distributionParams.Params.BonusProposerReward, 64); err == nil {
+			ch <- prometheus.MustNewConstMetric(c.paramsBonusProposerReward, prometheus.GaugeValue, bonusProposerReward, c.cfg.ChainID)
+		}
+	}
+
+	// Governance metrics - 실제 API 호출로 데이터 수집
+	if proposals, err := c.client.GetGovernanceProposals(); err == nil {
+		proposalCounts := make(map[string]int)
+		for _, proposal := range proposals.Proposals {
+			proposalCounts[proposal.Status]++
+		}
+		
+		for status, count := range proposalCounts {
+			ch <- prometheus.MustNewConstMetric(c.consensusProposalReceiveCount, prometheus.GaugeValue, float64(count), c.cfg.ChainID, status)
+		}
+	}
 
 	// Tenderduty metrics - 실제 블록 분석 기반
 	// 최근 100개 블록에서 signing 정보 분석
@@ -515,10 +615,47 @@ func (c *UnifiedCollector) collectCosmosMetrics(ctx context.Context, ch chan<- p
 	ch <- prometheus.MustNewConstMetric(c.tdValidatorJailed, prometheus.GaugeValue, 0, c.cfg.ChainID)
 	ch <- prometheus.MustNewConstMetric(c.tdTimeSinceLastBlock, prometheus.GaugeValue, 0, c.cfg.ChainID)
 	
-	// 각 validator별 개별 메트릭 생성
+	// 각 validator별 개별 메트릭 생성 - 실제 API 호출로 데이터 수집
+	// 먼저 모든 밸리데이터 정보를 가져옴
+	validators, err := c.client.GetValidators()
+	if err != nil {
+		c.logger.Error("Failed to get validators", "error", err)
+		return err
+	}
+
+	// 밸리데이터 정보를 맵으로 저장
+	validatorInfoMap := make(map[string]struct {
+		Moniker          string
+		Tokens           string
+		DelegatorShares  string
+		CommissionRate   string
+		Status           string
+		Jailed           bool
+		ConsensusAddress string
+	})
+
+	for _, validator := range validators.Validators {
+		validatorInfoMap[validator.ConsensusAddress] = struct {
+			Moniker          string
+			Tokens           string
+			DelegatorShares  string
+			CommissionRate   string
+			Status           string
+			Jailed           bool
+			ConsensusAddress string
+		}{
+			Moniker:          validator.Description.Moniker,
+			Tokens:           validator.Tokens,
+			DelegatorShares:  validator.DelegatorShares,
+			CommissionRate:   validator.Commission.CommissionRates.Rate,
+			Status:           validator.Status,
+			Jailed:           validator.Jailed,
+			ConsensusAddress: validator.ConsensusAddress,
+		}
+	}
+
 	for validatorAddr, stats := range validatorStats {
 		// Validator active status (block_id_flag 기반)
-		// 최근 블록에서 block_id_flag가 4면 active, 5면 inactive
 		validatorActive := 0.0
 		if currentHeight, err := strconv.ParseInt(status.Result.SyncInfo.LatestBlockHeight, 10, 64); err == nil {
 			if block, err := c.client.GetBlock(int(currentHeight)); err == nil {
@@ -541,24 +678,83 @@ func (c *UnifiedCollector) collectCosmosMetrics(ctx context.Context, ch chan<- p
 			missedBlocks = 0
 		}
 		
-		// Missed blocks 메트릭
-		ch <- prometheus.MustNewConstMetric(c.validatorMissedBlocks, prometheus.GaugeValue, float64(missedBlocks), c.cfg.ChainID, validatorAddr, "A41")
-		ch <- prometheus.MustNewConstMetric(c.validatorActive, prometheus.GaugeValue, validatorActive, c.cfg.ChainID, validatorAddr, "A41")
+		// 밸리데이터 정보 가져오기
+		var moniker string = "Unknown"
+		var tokens string = "0"
+		var delegatorShares string = "0"
+		var commissionRate string = "0"
+		var validatorStatus string = "UNBONDED"
+		var jailed bool = false
 		
-		// 추가 Validator 메트릭들 (데시몬 고려)
-		validatorTokens := convertFromBaseUnitFloat(36000000000000000000, c.cfg.TokenDecimals) // 36
-		ch <- prometheus.MustNewConstMetric(c.validatorTokens, prometheus.GaugeValue, validatorTokens, c.cfg.ChainID, validatorAddr, "A41", "0G")
-		ch <- prometheus.MustNewConstMetric(c.validatorCommissionRate, prometheus.GaugeValue, 0.05, c.cfg.ChainID, validatorAddr, "A41") // 5% 수수료율
-		commissionAmount := convertFromBaseUnitFloat(1800000000000000000, c.cfg.TokenDecimals) // 1.8 (5% of 36)
-		ch <- prometheus.MustNewConstMetric(c.validatorCommission, prometheus.GaugeValue, commissionAmount, c.cfg.ChainID, validatorAddr, "A41", "0G")
-		rewardsAmount := convertFromBaseUnitFloat(360000000000000000, c.cfg.TokenDecimals) // 0.36 (1% of 36)
-		ch <- prometheus.MustNewConstMetric(c.validatorRewards, prometheus.GaugeValue, rewardsAmount, c.cfg.ChainID, validatorAddr, "A41", "0G")
-		ch <- prometheus.MustNewConstMetric(c.validatorRank, prometheus.GaugeValue, 0, c.cfg.ChainID, validatorAddr, "A41")
-		ch <- prometheus.MustNewConstMetric(c.validatorStatus, prometheus.GaugeValue, 3, c.cfg.ChainID, validatorAddr, "A41") // BOND_STATUS_BONDED
-		ch <- prometheus.MustNewConstMetric(c.validatorJailedDesc, prometheus.GaugeValue, 0, c.cfg.ChainID, validatorAddr, "A41")
-		// 위임량을 데시몬을 고려하여 계산 (36 * 10^18 → 36)
-		delegatorShares := convertFromBaseUnitFloat(36000000000000000000, c.cfg.TokenDecimals)
-		ch <- prometheus.MustNewConstMetric(c.validatorDelegatorShares, prometheus.GaugeValue, delegatorShares, c.cfg.ChainID, validatorAddr, "A41")
+		if info, exists := validatorInfoMap[validatorAddr]; exists {
+			moniker = info.Moniker
+			tokens = info.Tokens
+			delegatorShares = info.DelegatorShares
+			commissionRate = info.CommissionRate
+			validatorStatus = info.Status
+			jailed = info.Jailed
+		}
+		
+		// Missed blocks 메트릭
+		ch <- prometheus.MustNewConstMetric(c.validatorMissedBlocks, prometheus.GaugeValue, float64(missedBlocks), c.cfg.ChainID, validatorAddr, moniker)
+		ch <- prometheus.MustNewConstMetric(c.validatorActive, prometheus.GaugeValue, validatorActive, c.cfg.ChainID, validatorAddr, moniker)
+		
+		// Validator 토큰 및 위임량
+		if tokensInt, err := strconv.ParseInt(tokens, 10, 64); err == nil {
+			tokensFloat := convertFromBaseUnit(tokensInt, c.cfg.TokenDecimals)
+			ch <- prometheus.MustNewConstMetric(c.validatorTokens, prometheus.GaugeValue, tokensFloat, c.cfg.ChainID, validatorAddr, moniker, "0G")
+		}
+		
+		if delegatorSharesFloat, err := strconv.ParseFloat(delegatorShares, 64); err == nil {
+			delegatorSharesConverted := convertFromBaseUnitFloat(delegatorSharesFloat, c.cfg.TokenDecimals)
+			ch <- prometheus.MustNewConstMetric(c.validatorDelegatorShares, prometheus.GaugeValue, delegatorSharesConverted, c.cfg.ChainID, validatorAddr, moniker)
+		}
+		
+		// Commission Rate
+		if commissionRateFloat, err := strconv.ParseFloat(commissionRate, 64); err == nil {
+			ch <- prometheus.MustNewConstMetric(c.validatorCommissionRate, prometheus.GaugeValue, commissionRateFloat, c.cfg.ChainID, validatorAddr, moniker)
+		}
+		
+		// Commission 및 Rewards (실제 API 호출)
+		if commission, err := c.client.GetValidatorCommission(validatorAddr); err == nil {
+			for _, comm := range commission.Commission.Commission {
+				if amount, err := strconv.ParseInt(comm.Amount, 10, 64); err == nil {
+					amountFloat := convertFromBaseUnit(amount, c.cfg.TokenDecimals)
+					ch <- prometheus.MustNewConstMetric(c.validatorCommission, prometheus.GaugeValue, amountFloat, c.cfg.ChainID, validatorAddr, moniker, comm.Denom)
+				}
+			}
+		}
+		
+		if rewards, err := c.client.GetValidatorRewards(validatorAddr); err == nil {
+			for _, reward := range rewards.Rewards.Rewards {
+				if amount, err := strconv.ParseInt(reward.Amount, 10, 64); err == nil {
+					amountFloat := convertFromBaseUnit(amount, c.cfg.TokenDecimals)
+					ch <- prometheus.MustNewConstMetric(c.validatorRewards, prometheus.GaugeValue, amountFloat, c.cfg.ChainID, validatorAddr, moniker, reward.Denom)
+				}
+			}
+		}
+		
+		// Status 및 Jailed
+		var statusValue float64
+		switch validatorStatus {
+		case "BOND_STATUS_BONDED":
+			statusValue = 3
+		case "BOND_STATUS_UNBONDING":
+			statusValue = 2
+		case "BOND_STATUS_UNBONDED":
+			statusValue = 1
+		default:
+			statusValue = 0
+		}
+		
+		var jailedValue float64 = 0
+		if jailed {
+			jailedValue = 1
+		}
+		
+		ch <- prometheus.MustNewConstMetric(c.validatorRank, prometheus.GaugeValue, 0, c.cfg.ChainID, validatorAddr, moniker)
+		ch <- prometheus.MustNewConstMetric(c.validatorStatus, prometheus.GaugeValue, statusValue, c.cfg.ChainID, validatorAddr, moniker)
+		ch <- prometheus.MustNewConstMetric(c.validatorJailedDesc, prometheus.GaugeValue, jailedValue, c.cfg.ChainID, validatorAddr, moniker)
 	}
 	
 	// 전체 proposal 수 계산 (첫 번째 validator 기준)
