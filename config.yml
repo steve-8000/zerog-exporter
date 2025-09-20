@@ -15,7 +15,7 @@ prometheus:
 
 chains:
   - chain_id: "0gchain-16601"
-    name: "0G aristotle Testnet"
+    name: "0G aristotle "
     rpc: "http://45.250.255.117:26657"
     api: "http://45.250.255.117:26657"
     websocket: "ws://45.250.255.117:26657/websocket"
